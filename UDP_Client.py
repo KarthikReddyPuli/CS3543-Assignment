@@ -16,7 +16,7 @@ import select
 UDP_IP = "0.0.0.0"
 UDP_PORT = 5005
 UDP_PORT2 = 5002
-SERVER_IP = "192.168.122.186"
+SERVER_IP = sys.argv[1]
 PData = None
 DataA = (b'NCC-1701', b'NCC-1664', b'NCC-1017')
 print("UDP target IP:", UDP_IP)

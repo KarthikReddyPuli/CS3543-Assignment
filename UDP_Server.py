@@ -16,7 +16,7 @@ import select
 UDP_IP = "0.0.0.0"
 UDP_PORT = 5005
 UDP_PORT2 = 5002
-Client_IP = "192.168.122.228"
+Client_IP = sys.argv[1]
 
 unpacker = struct.Struct('I I 8s 32s')
 
