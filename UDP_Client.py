@@ -16,9 +16,20 @@ import select
 UDP_IP = "0.0.0.0"
 UDP_PORT = 5005
 UDP_PORT2 = 5002
-SERVER_IP = sys.argv[1]
+SERVER_IP = '127.0.0.1'
+fileName = 'CS3543_100MB'
+if len(sys.argv) >= 2:
+    SERVER_IP = sys.argv[1]
+
+if len(sys.argv) >= 3:
+    fileName = sys.argv[2]
+
+in_file = open(fileName, "rb")
 PData = None
-DataA = (b'NCC-1701', b'NCC-1664', b'NCC-1017')
+bytesCount = 8
+endMessage = b'complete'
+DataA = [b'NCC-1701', b'NCC-1664', b'NCC-1017',endMessage]
+data = ""
 print("UDP target IP:", UDP_IP)
 print("UDP target port:", UDP_PORT2)
 
@@ -27,22 +38,30 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # ACKS
 sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Data Packets
 
 sock2.bind((UDP_IP, UDP_PORT2))
+x=0
+end=0
 
 # Create a loop to send each mark
-for x in range(0, 3):
+while end == 0:
 
     print("Packet Number: " + str(x+1))
+    data = in_file.read(bytesCount)
+    print(data)
+    if data == b'' :
+        in_file.close()
+        data = endMessage
+        end = 1
 
     while True:
 
         # Create the Checksum
-        values = (0, x % 2, DataA[x])
+        values = (0, x % 2, data)
         UDP_Data = struct.Struct('I I 8s')
         packed_data = UDP_Data.pack(*values)
         chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
 
         # Build the UDP Packet
-        values = (0, x % 2, DataA[x], chksum)
+        values = (0, x % 2, data, chksum)
 
         print("Sending Packet: ")  # Send the packet before packing it
         print(values)
@@ -103,3 +122,5 @@ for x in range(0, 3):
                 break
             else:
                 print('Packet is not Acknowlegde')
+
+    x = x + 1

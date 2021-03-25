@@ -12,11 +12,20 @@ import struct
 import sys
 import hashlib
 import select
+import codecs
 
 UDP_IP = "0.0.0.0"
 UDP_PORT = 5005
 UDP_PORT2 = 5002
-Client_IP = sys.argv[1]
+Client_IP = '127.0.0.1'
+bytesCount = 8
+fileName = 'out_CS3543_100MB'
+if len(sys.argv) == 2:
+    Client_IP = sys.argv[1]
+if len(sys.argv) >= 3:
+    fileName = sys.argv[2]
+endMessage = b'complete'
+out_file = open(fileName, "wb")
 
 unpacker = struct.Struct('I I 8s 32s')
 
@@ -26,7 +35,21 @@ sock2 = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Data Packets
 
 sock.bind((UDP_IP, UDP_PORT))
 
-for x in range(0, 3):
+end = 0
+x = 0
+
+def removeNullBytes(input):
+    offset = 8
+    i=7
+    while i>-1:
+        if input[i] == 0:
+            offset = offset - 1
+            i = i - 1
+        else:
+            break
+    return offset
+
+while end == 0:
 
     print("Packet Number: " + str(x+1))
 
@@ -60,12 +83,18 @@ for x in range(0, 3):
             print("Sending Packet: ")  # Print packet before packing data
             print(values)
 
+            if UDP_Packet[2] == endMessage:
+                end = 1
+                out_file.close()
+            else:
+                offset = removeNullBytes(UDP_Packet[2])
+                out_file.write(UDP_Packet[2][:offset])
+
             UDP_Packet_Data = struct.Struct('I I 8s 32s')
             UDP_Packet = UDP_Packet_Data.pack(*values)
 
             # Send Packet through
             sock2.sendto(UDP_Packet, (Client_IP, UDP_PORT2))
-
             break
 
         else:
@@ -88,5 +117,7 @@ for x in range(0, 3):
 
             # Send Packet through
             sock2.sendto(UDP_Packet, (Client_IP, UDP_PORT2))
+
+    x = x+1
 
 
