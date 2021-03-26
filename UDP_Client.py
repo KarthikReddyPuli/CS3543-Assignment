@@ -14,12 +14,14 @@ import hashlib
 import select
 import threading
 import datetime
+from copy import deepcopy
 
 UDP_IP = "0.0.0.0"
 UDP_PORT = 5005
 UDP_PORT2 = 5002
 SERVER_IP = '127.0.0.1'
 fileName = 'CS3543_100MB'
+Timeout = 1
 if len(sys.argv) >= 2:
     SERVER_IP = sys.argv[1]
 
@@ -27,7 +29,7 @@ if len(sys.argv) >= 3:
     fileName = sys.argv[2]
 
 recvUpdate = threading.Event()
-recv_UDP_Packet = [-1]
+recv_UDP_Packet = [-1,0]
 in_file = open(fileName, "rb")
 PData = None
 bytesCount = 8
@@ -47,9 +49,14 @@ end=0
 def updateRecv():
     global recv_UDP_Packet
     UDP_Packet_Data = struct.Struct('I I 8s 32s')
-    while True:
-        sock2.recvfrom(1024)
-        recv_UDP_Packet = UDP_Packet_Data.unpack(PData)
+    while end == 0:
+        recvUpdate.clear()
+        timer = select.select([sock2], [], [], Timeout)
+        # Check if data was sent
+        if timer[0]:
+            PData, addr = sock2.recvfrom(1024)
+            recv_UDP_Packet = UDP_Packet_Data.unpack(PData)
+            #print("Received: ",PData)
         recvUpdate.set()
 
 def sendData(count,data):
@@ -75,10 +82,12 @@ def sendData(count,data):
         startTime = datetime.datetime.now()
         timeout = 0
 
-        while recv_UDP_Packet[0] != UDP_Packet[0] :
+        while recv_UDP_Packet[0] != values[0] :
+            #print("recv_UDP_Packet: ",recv_UDP_Packet[0],"  UDP_Packet: ", UDP_Packet[0])
             recvUpdate.wait()
+            recvUpdate.clear()
             timeDifference = datetime.datetime.now() - startTime
-            if timeDifference.total_seconds() > 1 :
+            if timeDifference.total_seconds() > Timeout :
                 timeout = 1
                 break
 
@@ -86,9 +95,10 @@ def sendData(count,data):
             if recv_UDP_Packet[0] != UDP_Packet[0]:
                 print("Timeout")
                 continue
-
-        recvUpdate.clear()
-        values = (recv_UDP_Packet[0], recv_UDP_Packet[1], recv_UDP_Packet[2])
+        
+        #print("Passed Timeout")
+        UDP_Packet = deepcopy(recv_UDP_Packet)
+        values = (UDP_Packet[0], UDP_Packet[1], UDP_Packet[2])
         packer = struct.Struct('I I 8s')
         packed_data = packer.pack(*values)
         chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
@@ -107,7 +117,10 @@ def sendData(count,data):
             print("Incorrect Sequence Number, \nPacket resending ...\n...", x)
             continue
 
+        break
 
+updateRecvThread = threading.Thread(target=updateRecv)
+updateRecvThread.start()
 # Create a loop to send each mark
 while end == 0:
 
@@ -120,5 +133,5 @@ while end == 0:
 
     thread = threading.Thread(target=sendData,args=(x,data,))
     thread.start()
-
+    #sendData(x,data)
     x = x + 1

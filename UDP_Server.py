@@ -83,7 +83,7 @@ def receive_data(data,addr):
         #print('CheckSums Match, Sequence Number is correct, Packet OK')
 
         # Create the Checksum
-        values = (1, UDP_Packet[1], UDP_Packet[2])
+        values = (UDP_Packet[0], UDP_Packet[1], UDP_Packet[2])
         UDP_Data = struct.Struct('I I 8s')
         packed_data = UDP_Data.pack(*values)
         chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
@@ -91,8 +91,7 @@ def receive_data(data,addr):
         # Build the UDP Packet
         values = (UDP_Packet[0], UDP_Packet[1], UDP_Packet[2], chksum)
 
-        #print("Sending Packet: ")  # Print packet before packing data
-        #print(values)
+        #print("Sending Packet: ", values)  # Print packet before packing data
 
         UDP_Packet_Data = struct.Struct('I I 8s 32s')
         UDP_Packet_send = UDP_Packet_Data.pack(*values)
