@@ -81,13 +81,6 @@ def receive_data(data,addr):
     # Compare Checksums to test for corrupt data
     if UDP_Packet[3] == chksum and UDP_Packet[1] == UDP_Packet[0] % 2:
         #print('CheckSums Match, Sequence Number is correct, Packet OK')
-
-        # Create the Checksum
-        values = (UDP_Packet[0], UDP_Packet[1], UDP_Packet[2])
-        UDP_Data = struct.Struct('I I 8s')
-        packed_data = UDP_Data.pack(*values)
-        chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
-
         # Build the UDP Packet
         values = (UDP_Packet[0], UDP_Packet[1], UDP_Packet[2], chksum)
 

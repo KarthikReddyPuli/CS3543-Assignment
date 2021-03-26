@@ -48,6 +48,7 @@ end=0
 
 def updateRecv():
     global recv_UDP_Packet
+    global end
     UDP_Packet_Data = struct.Struct('I I 8s 32s')
     while end == 0:
         recvUpdate.clear()
@@ -93,7 +94,7 @@ def sendData(count,data):
 
         if timeout == 1:
             if recv_UDP_Packet[0] != UDP_Packet[0]:
-                print("Timeout")
+                print("Timeout: ",UDP_Packet[0])
                 continue
         
         #print("Passed Timeout")
@@ -123,7 +124,6 @@ updateRecvThread = threading.Thread(target=updateRecv)
 updateRecvThread.start()
 # Create a loop to send each mark
 while end == 0:
-
     print("Packet Number: " + str(x+1))
     data = in_file.read(bytesCount)
     if data == b'' :
