@@ -23,7 +23,7 @@ UDP_PORT = 5005
 UDP_PORT2 = 5002
 Client_IP = '127.0.0.1'
 bytesCount = 1024
-fileName = 'out_test.txt'
+fileName = 'out_CS3543_100MB'
 if len(sys.argv) == 2:
     Client_IP = sys.argv[1]
 if len(sys.argv) >= 3:
