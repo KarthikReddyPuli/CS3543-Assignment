@@ -21,6 +21,8 @@ UDP_PORT = 5005
 UDP_PORT2 = 5002
 SERVER_IP = '127.0.0.1'
 fileName = 'CS3543_100MB'
+maxThreads = 16
+maxRetries = 24
 Timeout = 1
 if len(sys.argv) >= 2:
     SERVER_IP = sys.argv[1]
@@ -46,6 +48,23 @@ sock2.bind((UDP_IP, UDP_PORT2))
 x=0
 end=0
 
+class Queue:
+
+  def __init__(self):
+    self.queue = list()
+
+  def addtoq(self,dataval):
+    self.queue.insert(0,dataval)
+    return True
+
+  def size(self):
+    return len(self.queue)
+
+  def removefromq(self):
+    return self.queue.pop()
+
+dataQueue = Queue()
+
 def updateRecv():
     global recv_UDP_Packet
     global end
@@ -61,8 +80,9 @@ def updateRecv():
         recvUpdate.set()
 
 def sendData(count,data):
-    while True:
-
+    retries = maxRetries
+    while (retries > 0):
+        retries = retries - 1
         # Create the Checksum
         values = (count, count % 2, data)
         UDP_Data = struct.Struct('I I 1024s')
@@ -119,11 +139,16 @@ def sendData(count,data):
             continue
 
         break
+    if(dataQueue.size()>0):
+        newData = dataQueue.removefromq()
+        return sendData(newData[0],newData[1])
+
 
 updateRecvThread = threading.Thread(target=updateRecv)
 updateRecvThread.start()
 # Create a loop to send each mark
-while end == 0:
+while maxThreads > 0 and end == 0:
+    maxThreads = maxThreads - 1
     print("Packet Number: " + str(x+1))
     data = in_file.read(bytesCount)
     if data == b'' :
@@ -135,3 +160,13 @@ while end == 0:
     thread.start()
     #sendData(x,data)
     x = x + 1
+
+while end == 0 :
+    print("Packet Number: " + str(x+1))
+    data = in_file.read(bytesCount)
+    if data == b'' :
+        in_file.close()
+        data = endMessage
+        end = 1
+    dataQueue.addtoq((x,data))
+    x = x+1
