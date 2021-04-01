@@ -20,7 +20,7 @@ UDP_IP = "0.0.0.0"
 UDP_PORT = 5005
 UDP_PORT2 = 5002
 SERVER_IP = '127.0.0.1'
-fileName = 'CS3543_100MB'
+fileName = 'test.txt'
 Timeout = 1
 if len(sys.argv) >= 2:
     SERVER_IP = sys.argv[1]
@@ -32,7 +32,7 @@ recvUpdate = threading.Event()
 recv_UDP_Packet = [-1,0]
 in_file = open(fileName, "rb")
 PData = None
-bytesCount = 8
+bytesCount = 1024
 endMessage = b'complete'
 data = ""
 print("UDP target IP:", SERVER_IP)
@@ -55,7 +55,7 @@ def updateRecv():
         timer = select.select([sock2], [], [], Timeout)
         # Check if data was sent
         if timer[0]:
-            PData, addr = sock2.recvfrom(1024)
+            PData, addr = sock2.recvfrom(2048)
             recv_UDP_Packet = UDP_Packet_Data.unpack(PData)
             #print("Received: ",PData)
         recvUpdate.set()
@@ -65,7 +65,7 @@ def sendData(count,data):
 
         # Create the Checksum
         values = (count, count % 2, data)
-        UDP_Data = struct.Struct('I I 8s')
+        UDP_Data = struct.Struct('I I 1024s')
         packed_data = UDP_Data.pack(*values)
         chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
 
@@ -75,7 +75,7 @@ def sendData(count,data):
         #print("Sending Packet: ")  # Send the packet before packing it
         #print(values)
 
-        UDP_Packet_Data = struct.Struct('I I 8s 32s')
+        UDP_Packet_Data = struct.Struct('I I 1024s 32s')
         UDP_Packet = UDP_Packet_Data.pack(*values)
 
         # Send Packet through
@@ -100,7 +100,7 @@ def sendData(count,data):
         #print("Passed Timeout")
         UDP_Packet = deepcopy(recv_UDP_Packet)
         values = (UDP_Packet[0], UDP_Packet[1], UDP_Packet[2])
-        packer = struct.Struct('I I 8s')
+        packer = struct.Struct('I I 1024s')
         packed_data = packer.pack(*values)
         chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
 

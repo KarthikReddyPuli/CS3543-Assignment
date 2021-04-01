@@ -1,6 +1,6 @@
 ##
 # CS3357 Assignment 3
-# Nicholas Porrone (250918147)
+# Nicholas Porrone (250911024147)
 
 # Instructions:
 # Make sure you run this file first! , Then you may run UDP_Client.py
@@ -22,8 +22,8 @@ UDP_IP = "0.0.0.0"
 UDP_PORT = 5005
 UDP_PORT2 = 5002
 Client_IP = '127.0.0.1'
-bytesCount = 8
-fileName = 'out_CS3543_100MB'
+bytesCount = 1024
+fileName = 'out_test.txt'
 if len(sys.argv) == 2:
     Client_IP = sys.argv[1]
 if len(sys.argv) >= 3:
@@ -31,7 +31,7 @@ if len(sys.argv) >= 3:
 endMessage = b'complete'
 out_file = open(fileName, "wb")
 
-unpacker = struct.Struct('I I 8s 32s')
+unpacker = struct.Struct('I I 1024s 32s')
 
 # Create the socket and listen
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # ACK
@@ -74,7 +74,7 @@ def receive_data(data,addr):
 
     # Create the Checksum for comparison
     values = (UDP_Packet[0], UDP_Packet[1], UDP_Packet[2])
-    packer = struct.Struct('I I 8s')
+    packer = struct.Struct('I I 1024s')
     packed_data = packer.pack(*values)
     chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
 
@@ -86,7 +86,7 @@ def receive_data(data,addr):
 
         #print("Sending Packet: ", values)  # Print packet before packing data
 
-        UDP_Packet_Data = struct.Struct('I I 8s 32s')
+        UDP_Packet_Data = struct.Struct('I I 1024s 32s')
         UDP_Packet_send = UDP_Packet_Data.pack(*values)
 
         # Send Packet through
@@ -104,7 +104,7 @@ def receive_data(data,addr):
 
         # Create the Checksum
         values = (1, (UDP_Packet[0]+1) % 2, UDP_Packet[2])
-        UDP_Data = struct.Struct('I I 8s')
+        UDP_Data = struct.Struct('I I 1024s')
         packed_data = UDP_Data.pack(*values)
         chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
 
@@ -113,15 +113,15 @@ def receive_data(data,addr):
 
         # Build the UDP Packet
         values = (1, (UDP_Packet[0] + 1) % 2, UDP_Packet[2], chksum)
-        UDP_Packet_Data = struct.Struct('I I 8s 32s')
+        UDP_Packet_Data = struct.Struct('I I 1024s 32s')
         UDP_Packet = UDP_Packet_Data.pack(*values)
 
         # Send Packet through
         sock2.sendto(UDP_Packet, (Client_IP, UDP_PORT2))
 
 def removeNullBytes(input):
-    offset = 8
-    i=7
+    offset = bytesCount
+    i=offset - 1
     while i>-1:
         if input[i] == 0:
             offset = offset - 1
@@ -133,7 +133,7 @@ def removeNullBytes(input):
 while endLoop.is_set() == False:
 
     print("Packet Number: " + str(x+1))
-    data, addr = sock.recvfrom(1024)
+    data, addr = sock.recvfrom(2048)
     #receive_data(data,addr)
     thread = threading.Thread(target=receive_data,args=(data,addr,))
     thread.start()
