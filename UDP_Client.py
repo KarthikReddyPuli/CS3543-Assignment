@@ -23,7 +23,7 @@ UDP_PORT = 5005
 UDP_PORT2 = 5002
 SERVER_IP = '127.0.0.1'
 fileName = 'CS3543_100MB'
-maxThreads = 2
+maxThreads = 1
 maxRetries = 24
 Timeout = 1
 TimeoutQueue = 0.1
@@ -37,10 +37,12 @@ recvUpdate = threading.Event()
 recv_UDP_Packet = [-1,0]
 in_file = open(fileName, "rb")
 PData = None
-bytesCount = 1024
+bytesCount = 1024 * 63
 endMessage = b'complete'
 data = ""
 MAX_QUEUE = 1000
+UDP_Data = struct.Struct('I I '+ str(bytesCount) +'s')
+UDP_Packet_Data = struct.Struct('I I '+ str(bytesCount) +'s 32s')
 print("UDP target IP:", SERVER_IP)
 print("UDP target port:", UDP_PORT2)
 
@@ -74,13 +76,12 @@ dataQueue = Queue()
 def updateRecv():
     global recv_UDP_Packet
     global end
-    UDP_Packet_Data = struct.Struct('I I 1024s 32s')
     while end == 0:
         recvUpdate.clear()
         timer = select.select([sock2], [], [], Timeout)
         # Check if data was sent
         if timer[0]:
-            PData, addr = sock2.recvfrom(2048)
+            PData, addr = sock2.recvfrom(bytesCount ** 2)
             recv_UDP_Packet = UDP_Packet_Data.unpack(PData)
             #print("Received: ",PData)
         recvUpdate.set()
@@ -88,7 +89,6 @@ def updateRecv():
 def sendData(count,data):
     # Create the Checksum
     values = (count, count % 2, data)
-    UDP_Data = struct.Struct('I I 1024s')
     packed_data = UDP_Data.pack(*values)
     chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
 
@@ -97,8 +97,6 @@ def sendData(count,data):
 
     #print("Sending Packet: ")  # Send the packet before packing it
     #print(values)
-
-    UDP_Packet_Data = struct.Struct('I I 1024s 32s')
     UDP_Packet = UDP_Packet_Data.pack(*values)
 
     # Send Packet through
@@ -123,10 +121,6 @@ def sendData(count,data):
     
     #print("Passed Timeout")
     UDP_Packet = deepcopy(recv_UDP_Packet)
-    values = (UDP_Packet[0], UDP_Packet[1], UDP_Packet[2])
-    packer = struct.Struct('I I 1024s')
-    packed_data = packer.pack(*values)
-    chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
 
     # Print the Data
 

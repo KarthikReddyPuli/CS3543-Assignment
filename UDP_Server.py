@@ -25,8 +25,8 @@ UDP_IP = "0.0.0.0"
 UDP_PORT = 5005
 UDP_PORT2 = 5002
 Client_IP = '127.0.0.1'
-bytesCount = 1024
-maxThreads = 8
+bytesCount = 1024 * 63
+maxThreads = 1
 fileName = 'out_CS3543_100MB'
 if len(sys.argv) == 2:
     Client_IP = sys.argv[1]
@@ -35,7 +35,8 @@ if len(sys.argv) >= 3:
 endMessage = b'complete'
 out_file = open(fileName, "wb")
 
-unpacker = struct.Struct('I I 1024s 32s')
+unpacker = struct.Struct('I I '+ str(bytesCount) +'s 32s')
+packer = struct.Struct('I I '+ str(bytesCount) +'s')
 
 # Create the socket and listen
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # ACK
@@ -78,7 +79,7 @@ def writeData(count,data):
     fileUpdate.clear()
     out_file.write(data)
     writeCount = writeCount+1
-    print("Wrote: ",size(count*bytesCount))
+    #print("Wrote: ",size(count*bytesCount))
     fileUpdate.set()
     return
 
@@ -102,23 +103,13 @@ def receive_data():
 
             # Create the Checksum for comparison
             values = (UDP_Packet[0], UDP_Packet[1], UDP_Packet[2])
-            packer = struct.Struct('I I 1024s')
             packed_data = packer.pack(*values)
             chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
 
             # Compare Checksums to test for corrupt data
             if UDP_Packet[3] == chksum and UDP_Packet[1] == UDP_Packet[0] % 2:
-                #print('CheckSums Match, Sequence Number is correct, Packet OK')
-                # Build the UDP Packet
-                values = (UDP_Packet[0], UDP_Packet[1], UDP_Packet[2], chksum)
-
-                #print("Sending Packet: ", values)  # Print packet before packing data
-
-                UDP_Packet_Data = struct.Struct('I I 1024s 32s')
-                UDP_Packet_send = UDP_Packet_Data.pack(*values)
-
                 # Send Packet through
-                sock2.sendto(UDP_Packet_send, (Client_IP, UDP_PORT2))
+                sock2.sendto(newData[0], (Client_IP, UDP_PORT2))
                 offset = removeNullBytes(UDP_Packet[2])
                 if UDP_Packet[2][:offset] == endMessage:
                     closeFile(UDP_Packet[0])
@@ -127,23 +118,7 @@ def receive_data():
             else:
 
                 print('CheckSums do not Match or the Sequence Number is incorrect, Packet is not ok')
-
-                # Create the Checksum
-                values = (1, (UDP_Packet[0]+1) % 2, UDP_Packet[2])
-                UDP_Data = struct.Struct('I I 1024s')
-                packed_data = UDP_Data.pack(*values)
-                chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
-
-                #print("Sending Packet: ")
-                #print(UDP_Packet)
-
-                # Build the UDP Packet
-                values = (1, (UDP_Packet[0] + 1) % 2, UDP_Packet[2], chksum)
-                UDP_Packet_Data = struct.Struct('I I 1024s 32s')
-                UDP_Packet = UDP_Packet_Data.pack(*values)
-
-                # Send Packet through
-                sock2.sendto(UDP_Packet, (Client_IP, UDP_PORT2))
+                sock2.sendto(newData[0], (Client_IP, UDP_PORT2))
         else:
             repeatRecv.wait()
 
@@ -164,7 +139,7 @@ repeatRecv.clear()
 while maxThreads>0 and endLoop.is_set() == False:
     maxThreads = maxThreads - 1
     #print("Packet Number: " + str(x+1))
-    data, addr = sock.recvfrom(2048)
+    data, addr = sock.recvfrom(bytesCount ** 2)
     dataQueue.addtoq((data,addr))
     repeatRecv.clear()
     thread = threading.Thread(target=receive_data)
@@ -173,7 +148,7 @@ while maxThreads>0 and endLoop.is_set() == False:
 
 while endLoop.is_set() == False:
     #print("Packet Number: " + str(x+1))
-    data, addr = sock.recvfrom(2048)
+    data, addr = sock.recvfrom(bytesCount ** 2)
     dataQueue.addtoq((data,addr))
     repeatRecv.clear()
     x = x+1
