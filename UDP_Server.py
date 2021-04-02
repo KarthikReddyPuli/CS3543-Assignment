@@ -47,7 +47,7 @@ sock.bind((UDP_IP, UDP_PORT))
 end = 0
 x = 0
 writeCount = 1
-Timeout = 0.5
+Timeout = 1
 
 class Queue:
 
@@ -94,7 +94,7 @@ def closeFile(count):
     print("File closed")
 
 def receive_data():
-    while endLoop.is_set() == False:
+    while True:
         newData = dataQueue.removefromq()
         if newData[0] != 0:
             UDP_Packet = unpacker.unpack(newData[0])
@@ -120,7 +120,10 @@ def receive_data():
                 print('CheckSums do not Match or the Sequence Number is incorrect, Packet is not ok')
                 sock2.sendto(newData[0], (Client_IP, UDP_PORT2))
         else:
-            repeatRecv.wait()
+            if endLoop.is_set() == True:
+                return
+            else:
+                repeatRecv.wait()
 
 
 def removeNullBytes(input):
@@ -137,18 +140,22 @@ def removeNullBytes(input):
 repeatRecv.clear()
 
 while maxThreads>0 and endLoop.is_set() == False:
-    maxThreads = maxThreads - 1
     #print("Packet Number: " + str(x+1))
-    data, addr = sock.recvfrom(bytesCount ** 2)
-    dataQueue.addtoq((data,addr))
-    repeatRecv.clear()
-    thread = threading.Thread(target=receive_data)
-    thread.start()
-    x = x+1
+    timer = select.select([sock],[],[],Timeout)
+    if timer[0]:
+        maxThreads = maxThreads - 1
+        data, addr = sock.recvfrom(bytesCount ** 2)
+        dataQueue.addtoq((data,addr))
+        repeatRecv.clear()
+        thread = threading.Thread(target=receive_data)
+        thread.start()
+        x = x+1
 
 while endLoop.is_set() == False:
-    #print("Packet Number: " + str(x+1))
-    data, addr = sock.recvfrom(bytesCount ** 2)
-    dataQueue.addtoq((data,addr))
-    repeatRecv.clear()
-    x = x+1
+    print("Packet Number: " + str(x+1))
+    timer = select.select([sock],[],[],Timeout)
+    if timer[0]:
+        data, addr = sock.recvfrom(bytesCount ** 2)
+        dataQueue.addtoq((data,addr))
+        repeatRecv.clear()
+        x = x+1

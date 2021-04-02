@@ -24,6 +24,7 @@ UDP_PORT2 = 5002
 SERVER_IP = '127.0.0.1'
 fileName = 'CS3543_100MB'
 maxThreads = 1
+currentThreads = maxThreads
 maxRetries = 24
 Timeout = 1
 TimeoutQueue = 0.1
@@ -76,7 +77,7 @@ dataQueue = Queue()
 def updateRecv():
     global recv_UDP_Packet
     global end
-    while end == 0:
+    while currentThreads>0:
         recvUpdate.clear()
         timer = select.select([sock2], [], [], Timeout)
         # Check if data was sent
@@ -141,20 +142,17 @@ def sendData(count,data):
 def readAndSendData():
     while True:
         newData = dataQueue.removefromq()
-        while newData[0]==0 and end == 0:
-            newData = dataQueue.removefromq()
         if newData[0]!=0:
             sendData(newData[0],newData[1])
-        elif end != 0:
-            time.sleep(Timeout)
-            newData = dataQueue.removefromq()
-            if newData[0]!=0 :
-                sendData(newData[0],newData[1])
+        else:
+            if end==0 :
+                continue
             else:
                 return
 
 updateRecvThread = threading.Thread(target=updateRecv)
 updateRecvThread.start()
+threadsArr = list()
 # Create a loop to send each mark
 while maxThreads > 0 and end == 0:
     maxThreads = maxThreads - 1
@@ -167,6 +165,7 @@ while maxThreads > 0 and end == 0:
     dataQueue.addtoq((x,data))
     thread = threading.Thread(target=readAndSendData)
     thread.start()
+    threadsArr.append(thread)
     #sendData(x,data)
     x = x + 1
 
@@ -179,5 +178,11 @@ while end == 0 :
         in_file.close()
         data = endMessage
         end = 1
+        print("Added end to queue")
     dataQueue.addtoq((x,data))
     x = x+1
+
+for thread in threadsArr:
+    thread.join()
+
+currentThreads = 0
