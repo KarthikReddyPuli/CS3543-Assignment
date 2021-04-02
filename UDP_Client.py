@@ -14,6 +14,7 @@ import hashlib
 import select
 import threading
 import datetime
+import time
 from copy import deepcopy
 
 UDP_IP = "0.0.0.0"
@@ -61,6 +62,8 @@ class Queue:
     return len(self.queue)
 
   def removefromq(self):
+    if len(self.queue)==0:
+        return (0,endMessage)
     return self.queue.pop()
 
 dataQueue = Queue()
@@ -68,7 +71,7 @@ dataQueue = Queue()
 def updateRecv():
     global recv_UDP_Packet
     global end
-    UDP_Packet_Data = struct.Struct('I I 8s 32s')
+    UDP_Packet_Data = struct.Struct('I I 1024s 32s')
     while end == 0:
         recvUpdate.clear()
         timer = select.select([sock2], [], [], Timeout)
@@ -137,11 +140,23 @@ def sendData(count,data):
         if UDP_Packet[1] == (count+1) % 2:
             print("Incorrect Sequence Number, \nPacket resending ...\n...", x)
             continue
+        
+        print("Calling repeat")
+        return repeat()
 
-        break
-    if(dataQueue.size()>0):
+def repeat():
+    newData = dataQueue.removefromq()
+    while newData[0]==0 and end == 0:
+        time.sleep(Timeout)
         newData = dataQueue.removefromq()
+    if newData[0]!=0:
         return sendData(newData[0],newData[1])
+    if end != 0:
+        time.sleep(Timeout)
+        newData = dataQueue.removefromq()
+        if newData[0]!=0 :
+            return sendData(newData[0],newData[1])
+        return
 
 
 updateRecvThread = threading.Thread(target=updateRecv)
@@ -162,7 +177,7 @@ while maxThreads > 0 and end == 0:
     x = x + 1
 
 while end == 0 :
-    print("Packet Number: " + str(x+1))
+    #print("Packet Number: " + str(x+1))
     data = in_file.read(bytesCount)
     if data == b'' :
         in_file.close()
