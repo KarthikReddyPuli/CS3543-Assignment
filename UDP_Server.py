@@ -144,7 +144,7 @@ while maxThreads>0 and endLoop.is_set() == False:
     timer = select.select([sock],[],[],Timeout)
     if timer[0]:
         maxThreads = maxThreads - 1
-        data, addr = sock.recvfrom(bytesCount ** 2)
+        data, addr = sock.recvfrom(bytesCount+1024)
         dataQueue.addtoq((data,addr))
         repeatRecv.clear()
         thread = threading.Thread(target=receive_data)
@@ -155,7 +155,7 @@ while endLoop.is_set() == False:
     print("Packet Number: " + str(x+1))
     timer = select.select([sock],[],[],Timeout)
     if timer[0]:
-        data, addr = sock.recvfrom(bytesCount ** 2)
+        data, addr = sock.recvfrom(bytesCount+1024)
         dataQueue.addtoq((data,addr))
         repeatRecv.clear()
         x = x+1

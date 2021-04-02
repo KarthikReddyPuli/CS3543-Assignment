@@ -82,7 +82,7 @@ def updateRecv():
         timer = select.select([sock2], [], [], Timeout)
         # Check if data was sent
         if timer[0]:
-            PData, addr = sock2.recvfrom(bytesCount ** 2)
+            PData, addr = sock2.recvfrom(bytesCount +1024)
             recv_UDP_Packet = UDP_Packet_Data.unpack(PData)
             #print("Received: ",PData)
         recvUpdate.set()
