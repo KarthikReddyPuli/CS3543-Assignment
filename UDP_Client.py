@@ -17,14 +17,16 @@ import datetime
 import time
 from copy import deepcopy
 
+sys.setrecursionlimit(10**6)
 UDP_IP = "0.0.0.0"
 UDP_PORT = 5005
 UDP_PORT2 = 5002
 SERVER_IP = '127.0.0.1'
 fileName = 'CS3543_100MB'
-maxThreads = 16
+maxThreads = 2
 maxRetries = 24
 Timeout = 1
+TimeoutQueue = 0.1
 if len(sys.argv) >= 2:
     SERVER_IP = sys.argv[1]
 
@@ -38,6 +40,7 @@ PData = None
 bytesCount = 1024
 endMessage = b'complete'
 data = ""
+MAX_QUEUE = 1000
 print("UDP target IP:", SERVER_IP)
 print("UDP target port:", UDP_PORT2)
 
@@ -63,7 +66,7 @@ class Queue:
 
   def removefromq(self):
     if len(self.queue)==0:
-        return (0,endMessage)
+        return (0,0)
     return self.queue.pop()
 
 dataQueue = Queue()
@@ -83,101 +86,100 @@ def updateRecv():
         recvUpdate.set()
 
 def sendData(count,data):
-    retries = maxRetries
-    while (retries > 0):
-        retries = retries - 1
-        # Create the Checksum
-        values = (count, count % 2, data)
-        UDP_Data = struct.Struct('I I 1024s')
-        packed_data = UDP_Data.pack(*values)
-        chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
+    # Create the Checksum
+    values = (count, count % 2, data)
+    UDP_Data = struct.Struct('I I 1024s')
+    packed_data = UDP_Data.pack(*values)
+    chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
 
-        # Build the UDP Packet
-        values = (count, count % 2, data, chksum)
+    # Build the UDP Packet
+    values = (count, count % 2, data, chksum)
 
-        #print("Sending Packet: ")  # Send the packet before packing it
-        #print(values)
+    #print("Sending Packet: ")  # Send the packet before packing it
+    #print(values)
 
-        UDP_Packet_Data = struct.Struct('I I 1024s 32s')
-        UDP_Packet = UDP_Packet_Data.pack(*values)
+    UDP_Packet_Data = struct.Struct('I I 1024s 32s')
+    UDP_Packet = UDP_Packet_Data.pack(*values)
 
-        # Send Packet through
-        sock.sendto(UDP_Packet, (SERVER_IP, UDP_PORT))
-        startTime = datetime.datetime.now()
-        timeout = 0
+    # Send Packet through
+    sock.sendto(UDP_Packet, (SERVER_IP, UDP_PORT))
+    #print("Packet Number: " + str(count+1))
+    startTime = datetime.datetime.now()
+    timeout = 0
 
-        while recv_UDP_Packet[0] != values[0] :
-            #print("recv_UDP_Packet: ",recv_UDP_Packet[0],"  UDP_Packet: ", UDP_Packet[0])
-            recvUpdate.wait()
-            recvUpdate.clear()
-            timeDifference = datetime.datetime.now() - startTime
-            if timeDifference.total_seconds() > Timeout :
-                timeout = 1
-                break
+    while recv_UDP_Packet[0] != values[0] :
+        #print("recv_UDP_Packet: ",recv_UDP_Packet[0],"  UDP_Packet: ", UDP_Packet[0])
+        recvUpdate.wait()
+        recvUpdate.clear()
+        timeDifference = datetime.datetime.now() - startTime
+        if timeDifference.total_seconds() > Timeout :
+            timeout = 1
+            break
 
-        if timeout == 1:
-            if recv_UDP_Packet[0] != UDP_Packet[0]:
-                print("Timeout: ",UDP_Packet[0])
-                continue
-        
-        #print("Passed Timeout")
-        UDP_Packet = deepcopy(recv_UDP_Packet)
-        values = (UDP_Packet[0], UDP_Packet[1], UDP_Packet[2])
-        packer = struct.Struct('I I 1024s')
-        packed_data = packer.pack(*values)
-        chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
+    if timeout == 1:
+        if recv_UDP_Packet[0] != UDP_Packet[0]:
+            print("Timeout: ",UDP_Packet[0])
+            return sendData(count,data)
+    
+    #print("Passed Timeout")
+    UDP_Packet = deepcopy(recv_UDP_Packet)
+    values = (UDP_Packet[0], UDP_Packet[1], UDP_Packet[2])
+    packer = struct.Struct('I I 1024s')
+    packed_data = packer.pack(*values)
+    chksum = bytes(hashlib.md5(packed_data).hexdigest(), encoding="UTF-8")
 
-        # Print the Data
+    # Print the Data
 
-        #print(UDP_Packet)
+    #print(UDP_Packet)
 
-        # Check if data is corrupt
-        if UDP_Packet[3] != chksum:
-            print('Checksums Do Not Match, Packet Corrupt')
-            continue
+    # Check if data is corrupt
+    if UDP_Packet[3] != chksum:
+        print('Checksums Do Not Match, Packet Corrupt')
+        return sendData(count,data)
 
-        # Check the sequence number.
-        if UDP_Packet[1] == (count+1) % 2:
-            print("Incorrect Sequence Number, \nPacket resending ...\n...", x)
-            continue
-        
-        print("Calling repeat")
-        return repeat()
+    # Check the sequence number.
+    if UDP_Packet[1] == (count+1) % 2:
+        print("Incorrect Sequence Number, \nPacket resending ...\n...", x)
+        return sendData(count,data)
+    return
 
-def repeat():
-    newData = dataQueue.removefromq()
-    while newData[0]==0 and end == 0:
-        time.sleep(Timeout)
+
+def readAndSendData():
+    while True:
         newData = dataQueue.removefromq()
-    if newData[0]!=0:
-        return sendData(newData[0],newData[1])
-    if end != 0:
-        time.sleep(Timeout)
-        newData = dataQueue.removefromq()
-        if newData[0]!=0 :
-            return sendData(newData[0],newData[1])
-        return
-
+        while newData[0]==0 and end == 0:
+            newData = dataQueue.removefromq()
+        if newData[0]!=0:
+            sendData(newData[0],newData[1])
+        elif end != 0:
+            time.sleep(Timeout)
+            newData = dataQueue.removefromq()
+            if newData[0]!=0 :
+                sendData(newData[0],newData[1])
+            else:
+                return
 
 updateRecvThread = threading.Thread(target=updateRecv)
 updateRecvThread.start()
 # Create a loop to send each mark
 while maxThreads > 0 and end == 0:
     maxThreads = maxThreads - 1
-    print("Packet Number: " + str(x+1))
+    #print("Packet Number: " + str(x+1))
     data = in_file.read(bytesCount)
     if data == b'' :
         in_file.close()
         data = endMessage
         end = 1
-
-    thread = threading.Thread(target=sendData,args=(x,data,))
+    dataQueue.addtoq((x,data))
+    thread = threading.Thread(target=readAndSendData)
     thread.start()
     #sendData(x,data)
     x = x + 1
 
 while end == 0 :
     #print("Packet Number: " + str(x+1))
+    if dataQueue.size() > MAX_QUEUE:
+        continue
     data = in_file.read(bytesCount)
     if data == b'' :
         in_file.close()
