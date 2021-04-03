@@ -17,7 +17,7 @@ UDP_IP = "0.0.0.0"
 UDP_PORT = 5005
 UDP_PORT2 = 5002
 Client_IP = "127.0.0.1"
-bytesCount = 1024 * 31
+bytesCount = 1024 * 63
 maxThreads = 1
 fileName = "out_CS3543_100MB"
 if len(sys.argv) == 2:
