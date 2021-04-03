@@ -17,7 +17,7 @@ UDP_IP = "0.0.0.0"
 UDP_PORT = 5005
 UDP_PORT2 = 5002
 Client_IP = "127.0.0.1"
-bytesCount = 1024 * 63
+bytesCount = 1024 * 31
 maxThreads = 1
 fileName = "out_CS3543_100MB"
 if len(sys.argv) == 2:
@@ -39,7 +39,7 @@ sock.bind((UDP_IP, UDP_PORT))
 end = 0
 x = 0
 writeCount = 0
-Timeout = 1
+Timeout = 0.03
 
 # Queue to store pending packets
 class Queue:
