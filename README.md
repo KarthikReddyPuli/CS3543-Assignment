@@ -10,6 +10,6 @@ This an RDT implementation over UDP. It is written in python.
 
 ## Commands
 
-`python UDP_Server.py 127.0.0.1 CS3543_100MB`
+`python UDP_Server.py 127.0.0.1 out_CS3543_100MB`
 
-`python UDP_Client.py 127.0.0.1 out_CS3543_100MB`
+`python UDP_Client.py 127.0.0.1 CS3543_100MB`
