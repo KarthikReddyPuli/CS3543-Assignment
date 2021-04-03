@@ -38,7 +38,7 @@ sock.bind((UDP_IP, UDP_PORT))
 
 end = 0
 x = 0
-writeCount = 1
+writeCount = 0
 Timeout = 1
 
 # Queue to store pending packets
@@ -139,7 +139,7 @@ def removeNullBytes(input):
 repeatRecv.clear()
 
 while maxThreads > 0 and endLoop.is_set() == False:
-    # print("Packet Number: " + str(x+1))
+    print("Packet Number: " + str(x+1))
     timer = select.select([sock], [], [], Timeout)
     if timer[0]:
         maxThreads = maxThreads - 1

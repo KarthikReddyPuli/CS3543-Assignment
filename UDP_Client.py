@@ -61,7 +61,7 @@ class Queue:
 
     def removefromq(self):
         if len(self.queue) == 0:
-            return (0, 0)
+            return (-1, 0)
         return self.queue.pop()
 
 
@@ -137,7 +137,7 @@ def sendData(count, data):
 def readAndSendData():
     while True:
         newData = dataQueue.removefromq()
-        if newData[0] != 0:
+        if newData[0] != -1:
             sendData(newData[0], newData[1])
         else:
             if end == 0:
