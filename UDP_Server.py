@@ -1,11 +1,3 @@
-##
-# CS3357 Assignment 3
-# Nicholas Porrone (250911024147)
-
-# Instructions:
-# Make sure you run this file first! , Then you may run UDP_Client.py
-# Enjoy!
-
 import binascii
 import socket
 import struct
@@ -49,6 +41,7 @@ x = 0
 writeCount = 1
 Timeout = 1
 
+# Queue to store pending packets
 class Queue:
 
   def __init__(self):
