@@ -1,11 +1,3 @@
-##
-# CS3357 Assignment 3
-# Nicholas Porrone (250918147)
-
-# Instructions:
-# Be sure to run UDP_Server.py before this file!
-# Enjoy :)
-
 import binascii
 import socket
 import struct
@@ -55,6 +47,7 @@ sock2.bind((UDP_IP, UDP_PORT2))
 x=0
 end=0
 
+# Queue to store the pending packets
 class Queue:
 
   def __init__(self):
